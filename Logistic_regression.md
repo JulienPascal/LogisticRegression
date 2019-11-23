@@ -2,12 +2,14 @@
 # Logistic Regression from Scratch
 
 
-The [logistic regression model](https://en.wikipedia.org/wiki/Logistic_regression) is a natural candidate when one is interested in a binary outcome. For instance, a researcher might be interested in knowing what makes a successful politician. For the purpose of this blog post, "success"
+The [logistic model](https://en.wikipedia.org/wiki/Logistic_regression) is a natural candidate when one is interested in a binary outcome. For instance, a researcher might be interested in knowing what makes a successful politician. For the purpose of this blog post, "success"
 means the probability of winning an election. In that case, it would be sub-optimal
 to use a linear regression model to see what factors are associated with successful
 politicians, as the outcome variable is binary (a politician either wins or loses an election).
+
+
 The linear model is built around the idea that the outcome variable is continuous. What if
-the statistician tries to sees what factors are influencing the **probability** of
+the statistician tries to see what factors are influencing the **probability** of
 winning? This strategy naturally lends itself to using a [logistic model](https://en.wikipedia.org/wiki/Logistic_regression) (or a [probit](https://en.wikipedia.org/wiki/Probit_model)).
 In this blog post, I derive the **logistic model from scratch** and show how one
 can estimate its parameters using **gradient descent** or **Newton-Raphson** algorithms. I also use data on NBA players to see what makes a shot successful.
@@ -28,17 +30,18 @@ $$ f(y_i | x_{i}, \theta) =  1 - \sigma(x_{i} '\theta)$$
 
 ## A latent variable formulation
 
-A powerful way of interpreting the logistic regression model is to see it as the outcome of latent regression model.
+A powerful way of interpreting the logistic model is to see it as the outcome of latent variable model.
 An unobservable latent variable $z_{i}$ depends linearly on $x_{i}$ plus a noise term $\varepsilon_{i}$:
 
 $$ z_{i} = x_{i} '\theta + \varepsilon_{i} $$
 
-We only observe $y_i$, which is equal to 1 when $z_{i}$ is strictly positive, and 0 otherwise. If the error term is distributed according to the [logistic distribution](https://en.wikipedia.org/wiki/Logistic_distribution), we end up with the logistic model described above. If the error term is normally distributed, the model is a [probit model](https://en.wikipedia.org/wiki/Probit_model). To see that, simply express the probability of the latent variable to be bigger than 1:
+We only observe $y_i$, which is equal to 1 when $z_{i}$ is strictly positive, and 0 otherwise. If the error term is distributed according to the [logistic distribution](https://en.wikipedia.org/wiki/Logistic_distribution), we end up with the logistic model described above. If the error term is normally distributed, the model is a [probit model](https://en.wikipedia.org/wiki/Probit_model). To see that, simply express the probability of
+the latent variable to be bigger than 0:
 
-$$ f(y_i | x_{i}, \theta_{i}) = P( x_{i} '\theta + \varepsilon_{i} > 0) $$
-$$  = 1 - P( x_{i} '\theta + \varepsilon_{i} \leq 0) $$
-$$  = 1 - P(\varepsilon_{i} \leq - x_{i} '\theta ) $$
-$$  = 1 - P(\varepsilon_{i} \leq - x_{i} '\theta ) $$
+$$ f(y_i | x_{i}, \theta_{i}) = P( x_{i} '\theta + \varepsilon_{i} > 0) $$ 
+$$  = 1 - P( x_{i} '\theta + \varepsilon_{i} \leq 0) $$ 
+$$  = 1 - P(\varepsilon_{i} \leq - x_{i} '\theta ) $$ 
+$$  = 1 - P(\varepsilon_{i} \leq - x_{i} '\theta ) $$ 
 $$  = \frac{exp(x_{i} '\theta )}{1+exp(x_{i} '\theta )} $$
 
 where the last line comes from using the expression of the [cdf of the logistic distribution](https://en.wikipedia.org/wiki/Logistic_distribution) with zero mean and scale parameter 1.
@@ -47,20 +50,20 @@ where the last line comes from using the expression of the [cdf of the logistic 
 
 How can we read the coefficients from a logistic model? The marginal effect of a change in $x_{ij}$ (the $jth$ component of $x_i$) on the probability that $y_i = 1$ is given by:
 
-$$ \frac{\partial f(y_i | x_{i}, \theta)}{\partial x_{ij}} = \sigma(x_{i} '\theta)(1-\sigma(x_{i} '\theta))\theta_j$$
+$$ \frac{\partial f(y_i | x_{i}, \theta)}{\partial x_{ij}} = \sigma(x_{i} '\theta)(1-\sigma(x_{i} '\theta))\theta_j$$ 
 
 A first observation is that the marginal effect depends on $x_i$, unlike in the linear regression model. A second observation is that the first two terms are always positive, so we do have that the interpretation that if $\theta_j$ is positive, an increase in the $jth$ component of $x_i$ leads to a bigger probability of obtaining a success (holding everything else constant).
 
 Another way to read the results from a logistic model is to realize that it implies that the log of odd ratio is linear:
 
-$$ log\Big(\frac{f(y_i | x_{i}, \theta)}{1 - f(y_i | x_{i}, \theta)}\Big) = x_{i} '\theta$$
+$$ log\Big(\frac{f(y_i | x_{i}, \theta)}{1 - f(y_i | x_{i}, \theta)}\Big) = x_{i} '\theta$$ 
 
 Going back to what makes a politician successful in an election, if the coefficient $\theta_j$ is equal to 0.1, it means that a one unit increase in $x_{ij}$ rises the relative probability of winning an election by approximately $10\%$.
 
 ## Log-likelihood function
 
-To understand what makes a successful politician (or to predict who is going to win the next elections), one must estimate the value of $\theta$ using the information contained in the sample $(y_i, x_i)_{i=1}^{N}$. One "natural" criterion is to find the value for $\theta$ that **maximizes the probability of observing the
-sample**. This procedure is called [Maximum likelihood estimation](https://en.wikipedia.org/wiki/Maximum_likelihood_estimation). Let us assume that sample is [i.i.d](https://en.wikipedia.org/wiki/Independent_and_identically_distributed_random_variables). If the i.i.d assumption holds, the probability of observing the $(y_i, x_i)_{i=1}^{N}$ is the product of the probability of observing each observation. Instead of maximizing the likelihood, it is more convenient to maximize the log-likelihood, which transforms the product of probabilities into a sum:
+To predict who is going to win the next elections, one must estimate the value of $\theta$ using the information contained in the sample $(y_i, x_i)_{i=1}^{N}$. One "natural" criterion is to find the value for $\theta$ that **maximizes the probability of observing the
+sample**. This procedure is called [Maximum likelihood estimation](https://en.wikipedia.org/wiki/Maximum_likelihood_estimation). Let us assume that sample is [i.i.d](https://en.wikipedia.org/wiki/Independent_and_identically_distributed_random_variables). If the i.i.d assumption holds, the probability of observing the sample $(y_i, x_i)_{i=1}^{N}$ is the product of the probability of observing each observation. Instead of maximizing the likelihood, it is more convenient to maximize the log-likelihood, which transforms the product of probabilities into a sum:
 
 $$ L((y_i, x_i)_{i=1}^{N};\theta) = log( \prod_{i=1}^{N}f(y_i | x_{i}, \theta)) = \sum_{i=1}^{N} log(f(y_i | x_{i}, \theta_{i}))$$
 
@@ -107,7 +110,7 @@ source: https://en.wikipedia.org/wiki/Newton%27s_method
 Should we use gradient descent or Newton-Raphson? I let the following extract
 from the [Wikipedia article](https://en.wikipedia.org/wiki/Newton%27s_method_in_optimization) on Newton-Raphson speak for itself:
 
-> Where applicable, Newton's method converges much faster towards a local maximum or minimum than gradient descent. In fact, every local minimum has a neighborhood N such that, if we start with x0 ∈ N, Newton's method with step size γ = 1 converges quadratically (if the Hessian is invertible and a Lipschitz continuous function of x in that neighborhood).
+> Where applicable, Newton's method converges much faster towards a local maximum or minimum than gradient descent. In fact, every local minimum has a neighborhood N such that, if we start with x0 ∈ N, Newton's method with step size γ = 1 converges quadratically (if the Hessian is invertible and a Lipschitz continuous function of x in that neighborhood). 
 
 For the logistic model, the Newton-Raphson model is easily applicable because there exists a closed-form formula for the Hessian:
 
@@ -149,6 +152,13 @@ function sigma(x::Array{Float64,1})
 end
 ```
 
+
+
+
+    sigma (generic function with 2 methods)
+
+
+
 Let's create a function that calculates the likelihood:
 
 
@@ -162,6 +172,13 @@ function log_likelihood(y::Array{Float64,1}, X::Array{Float64,2}, theta::Array{F
     return sum
 end
 ```
+
+
+
+
+    log_likelihood (generic function with 1 method)
+
+
 
 Let's create a function that returns the derivative of the log-likelihood of the sample, which we need for the gradient descent algorithm:
 
@@ -178,6 +195,13 @@ function derivative_log_likelihood(y::Array{Float64,1}, X::Array{Float64,2}, the
 end
 ```
 
+
+
+
+    derivative_log_likelihood (generic function with 1 method)
+
+
+
 Let's create a function that returns the Hessian of the log-likelihood of the sample, which we need for the Newthon-Raphson algorithm:
 
 
@@ -192,6 +216,13 @@ function hessian_log_likelihood(y::Array{Float64,1}, X::Array{Float64,2}, theta:
     return hessian
 end
 ```
+
+
+
+
+    hessian_log_likelihood (generic function with 1 method)
+
+
 
 Let's simulate a sample of individuals:
 
@@ -230,7 +261,10 @@ plot(p1,p2)
 ```
 
 
+
+
 ![png](Logistic_regression_files/Logistic_regression_29_0.png)
+
 
 
 ### Maximization with Optim
@@ -243,7 +277,37 @@ algorithm:
 theta_guess = ones(dim_X)
 @time res = optimize(theta -> - log_likelihood(y, X, theta), theta_guess, LBFGS())
 ```
-0.409340 seconds (3.79 M allocations: 396.250 MiB, 15.73% gc time)
+
+      0.365351 seconds (3.25 M allocations: 337.831 MiB, 14.42% gc time)
+
+
+
+
+
+     * Status: failure (objective increased between iterations) (line search failed)
+    
+     * Candidate solution
+        Minimizer: [-1.21e-02, 1.03e+00, 2.03e+00]
+        Minimum:   4.301072e+03
+    
+     * Found with
+        Algorithm:     L-BFGS
+        Initial Point: [1.00e+00, 1.00e+00, 1.00e+00]
+    
+     * Convergence measures
+        |x - x'|               = 5.95e-08 ≰ 0.0e+00
+        |x - x'|/|x'|          = 2.93e-08 ≰ 0.0e+00
+        |f(x) - f(x')|         = 4.55e-12 ≰ 0.0e+00
+        |f(x) - f(x')|/|f(x')| = 1.06e-15 ≰ 0.0e+00
+        |g(x)|                 = 1.80e-06 ≰ 1.0e-08
+    
+     * Work counters
+        Seconds run:   0  (vs limit Inf)
+        Iterations:    7
+        f(x) calls:    22
+        ∇f(x) calls:   22
+
+
 
 
 We successfully recover the true parameter values (see `theta0`):
@@ -253,7 +317,7 @@ We successfully recover the true parameter values (see `theta0`):
 print("Estimate for theta using Optim is $(res.minimizer)")
 ```
 
-    Estimate for theta using Optim is [-0.0312666, 0.996344, 1.96038]
+    Estimate for theta using Optim is [-0.0121241, 1.03182, 2.03217]
 
 ### Minimization with gradient descent
 
@@ -261,7 +325,7 @@ Let's implement the gradient descent algorithm within a function:
 
 
 ```julia
-function gradient_descent_probit(y, X , theta_initial::Array{Float64,1}; max_iter::Int64 = 1000,
+function gradient_descent_probit(y, X , theta_initial::Array{Float64,1}; max_iter::Int64 = 1000, 
                                 learning_rate::Float64 = 0.000001, tol::Float64=0.01)
     #initial value for theta:
     theta_old = theta_initial
@@ -270,7 +334,7 @@ function gradient_descent_probit(y, X , theta_initial::Array{Float64,1}; max_ite
     success_flag = 0
     #Let's store the convergence history
     history= fill!(zeros(max_iter), NaN)
-    for i=1:max_iter
+    for i=1:max_iter 
         theta_new = theta_old + learning_rate*derivative_log_likelihood(y, X, theta_old)
         diff = maximum(abs, theta_new .- theta_old)
         history[i] = diff
@@ -280,18 +344,26 @@ function gradient_descent_probit(y, X , theta_initial::Array{Float64,1}; max_ite
         end
         theta_old = theta_new
     end
-
+    
     return theta_new, success_flag, history[isnan.(history) .== false]
-
+    
 end
 ```
+
+
+
+
+    gradient_descent_probit (generic function with 1 method)
+
+
+
 
 ```julia
 theta_guess = zeros(dim_X)
 @time theta, flag, history = gradient_descent_probit(y, X, theta_guess, max_iter=100000, learning_rate=0.0001, tol=0.00001);
 ```
 
-      0.252281 seconds (4.89 M allocations: 523.159 MiB, 29.08% gc time)
+      0.349763 seconds (5.32 M allocations: 557.288 MiB, 22.06% gc time)
 
 
 The following graph shows the error as a function of the number of iterations. After a few iterations of the gradient descent algorithm, the error is quite small.
@@ -300,6 +372,7 @@ The following graph shows the error as a function of the number of iterations. A
 ```julia
 plot(history, label= "error", title = "Convergence of the gradient descent algorithm")
 ```
+
 
 
 
@@ -312,7 +385,7 @@ plot(history, label= "error", title = "Convergence of the gradient descent algor
 print("Estimate for theta using gradient descent is $(theta)")
 ```
 
-    Estimate for theta using gradient descent is [0.0581777, 1.00105, 1.97901]
+    Estimate for theta using gradient descent is [-0.0121219, 1.03172, 2.03198]
 
 ### Minimization with Newton-Raphson
 
@@ -329,7 +402,7 @@ function nr_probit(y, X , theta_initial::Array{Float64,1};
     success_flag = 0
     #Let's store the convergence history
     history= fill!(zeros(max_iter), NaN)
-    for i=1:max_iter
+    for i=1:max_iter 
         theta_new = theta_old - inv(hessian_log_likelihood(y, X, theta_old))*derivative_log_likelihood(y, X, theta_old)
         diff = maximum(abs, theta_new .- theta_old)
         history[i] = diff
@@ -339,11 +412,18 @@ function nr_probit(y, X , theta_initial::Array{Float64,1};
         end
         theta_old = theta_new
     end
-
+    
     return theta_new, success_flag, history[isnan.(history) .== false]
-
+    
 end
 ```
+
+
+
+
+    nr_probit (generic function with 1 method)
+
+
 
 The following graph shows that we find the minimizer in only 5 steps! The Newton-Raphson algorithm clearly outperforms gradient descent. Of course, everything works well because the
 problem is well-behaved and a nice formula for the Hessian is available.
@@ -352,10 +432,11 @@ problem is well-behaved and a nice formula for the Hessian is available.
 ```julia
 theta_guess = ones(dim_X)
 @time theta, flag, history = nr_probit(y, X, theta_guess, max_iter=1000, tol=0.00001);
-plot(history, label= "error", title = "Convergence of the gradient descent algorithm")
+plot(history, label= "error", title = "Convergence of the Newton-Raphson algorithm")
 ```
 
-      0.037832 seconds (500.07 k allocations: 53.431 MiB, 35.44% gc time)
+      0.532827 seconds (2.62 M allocations: 160.921 MiB, 8.07% gc time)
+
 
 
 
@@ -369,7 +450,7 @@ plot(history, label= "error", title = "Convergence of the gradient descent algor
 print("Estimate for theta using Newton-Raphson is $(theta)")
 ```
 
-    Estimate for theta using Newton-Raphson is [0.0581789, 1.00114, 1.97919]
+    Estimate for theta using Newton-Raphson is [-0.012124, 1.03182, 2.03217]
 
 ### Using GLM
 
@@ -384,7 +465,7 @@ first(df,6)
 
 
 
-<table class="data-frame"><thead><tr><th></th><th>X1</th><th>X2</th><th>X3</th><th>y</th></tr><tr><th></th><th>Float64</th><th>Float64</th><th>Float64</th><th>Float64</th></tr></thead><tbody><p>6 rows × 4 columns</p><tr><th>1</th><td>1.0</td><td>0.215315</td><td>1.29817</td><td>1.0</td></tr><tr><th>2</th><td>1.0</td><td>-0.0714749</td><td>0.586886</td><td>1.0</td></tr><tr><th>3</th><td>1.0</td><td>0.0463648</td><td>-0.145116</td><td>1.0</td></tr><tr><th>4</th><td>1.0</td><td>1.95096</td><td>0.26349</td><td>1.0</td></tr><tr><th>5</th><td>1.0</td><td>-0.162081</td><td>1.34871</td><td>1.0</td></tr><tr><th>6</th><td>1.0</td><td>0.00214326</td><td>-0.271835</td><td>1.0</td></tr></tbody></table>
+<table class="data-frame"><thead><tr><th></th><th>X1</th><th>X2</th><th>X3</th><th>y</th></tr><tr><th></th><th>Float64</th><th>Float64</th><th>Float64</th><th>Float64</th></tr></thead><tbody><p>6 rows × 4 columns</p><tr><th>1</th><td>1.0</td><td>-0.375399</td><td>-0.388093</td><td>0.0</td></tr><tr><th>2</th><td>1.0</td><td>-2.1406</td><td>-0.491775</td><td>0.0</td></tr><tr><th>3</th><td>1.0</td><td>0.535688</td><td>0.0924294</td><td>1.0</td></tr><tr><th>4</th><td>1.0</td><td>-1.1767</td><td>0.347275</td><td>1.0</td></tr><tr><th>5</th><td>1.0</td><td>0.644961</td><td>0.794347</td><td>0.0</td></tr><tr><th>6</th><td>1.0</td><td>1.1565</td><td>0.707322</td><td>1.0</td></tr></tbody></table>
 
 
 
@@ -393,30 +474,30 @@ first(df,6)
 fittedmodel = glm(@formula(y ~ X2 + X3), df, Binomial(), LogitLink(), verbose=true);
 ```
 
-    Iteration: 1, deviance: 8788.802557538282, diff.dev.:260.3659362733488
-    Iteration: 2, deviance: 8775.744468853914, diff.dev.:13.058088684367249
-    Iteration: 3, deviance: 8775.697044683246, diff.dev.:0.04742417066881899
-    Iteration: 4, deviance: 8775.697043975773, diff.dev.:7.074722816469148e-7
+    Iteration: 1, deviance: 8620.302013231514, diff.dev.:301.86766528565204
+    Iteration: 2, deviance: 8602.238966884226, diff.dev.:18.063046347288036
+    Iteration: 3, deviance: 8602.144735531361, diff.dev.:0.09423135286488105
+    Iteration: 4, deviance: 8602.144732577755, diff.dev.:2.953605871880427e-6
 
 
 
 ```julia
-print("Estimate for theta using GLM is $(coef(fittedmodel))")
+print("Estimate for theta using GLM is $(coef(fittedmodel))") 
 ```
 
-    Estimate for theta using GLM is [-0.0312666, 0.996344, 1.96038]
+    Estimate for theta using GLM is [-0.012124, 1.03182, 2.03217]
 
 ##  II. What makes a successful NBA player?
 
 For an example involving real data, I use the data set on **NBA shots** taken during the 2014-2015 season.
-It contains information on:
+It contains information on: 
 
 * who took the shot
 * where on the floor was the shot taken from
-* who was the nearest defender,
+* who was the nearest defender, 
 * how far away was the nearest defender
 * time on the shot clock
-* etc.
+* etc. 
 
 The data is available on **Kaggle** [here](https://www.kaggle.com/dansbecker/nba-shot-logs)
 
@@ -425,6 +506,34 @@ The data is available on **Kaggle** [here](https://www.kaggle.com/dansbecker/nba
 df_nba = CSV.read("/home/julien/Documents/REPOSITORIES/LogisticRegression/data/shot_logs.csv");
 names(df_nba)
 ```
+
+
+
+
+    21-element Array{Symbol,1}:
+     :GAME_ID                   
+     :MATCHUP                   
+     :LOCATION                  
+     :W                         
+     :FINAL_MARGIN              
+     :SHOT_NUMBER               
+     :PERIOD                    
+     :GAME_CLOCK                
+     :SHOT_CLOCK                
+     :DRIBBLES                  
+     :TOUCH_TIME                
+     :SHOT_DIST                 
+     :PTS_TYPE                  
+     :SHOT_RESULT               
+     :CLOSEST_DEFENDER          
+     :CLOSEST_DEFENDER_PLAYER_ID
+     :CLOSE_DEF_DIST            
+     :FGM                       
+     :PTS                       
+     :player_name               
+     :player_id                 
+
+
 
 The dataset is quite extensive. Let's select whether or not the shot was successful, **the shot clock, the shot distance, and the proximity with the closest defender**:
 
@@ -464,24 +573,24 @@ fittedmodel
 
 
     StatsModels.TableRegressionModel{GeneralizedLinearModel{GLM.GlmResp{Array{Float64,1},Binomial{Float64},LogitLink},GLM.DensePredChol{Float64,LinearAlgebra.Cholesky{Float64,Array{Float64,2}}}},Array{Float64,2}}
-
+    
     SHOT_RESULT ~ 1 + SHOT_CLOCK + SHOT_DIST + CLOSE_DEF_DIST
-
+    
     Coefficients:
     ────────────────────────────────────────────────────────────────────────────────────
                       Estimate   Std. Error    z value  Pr(>|z|)   Lower 95%   Upper 95%
     ────────────────────────────────────────────────────────────────────────────────────
-    (Intercept)     -0.0575127  0.0181349     -3.17139    0.0015  -0.0930564  -0.021969
+    (Intercept)     -0.0575127  0.0181349     -3.17139    0.0015  -0.0930564  -0.021969 
     SHOT_CLOCK       0.0185198  0.00104899    17.6549     <1e-69   0.0164639   0.0205758
     SHOT_DIST       -0.059745   0.000858282  -69.61       <1e-99  -0.0614272  -0.0580628
-    CLOSE_DEF_DIST   0.108392   0.00279232    38.8179     <1e-99   0.102919    0.113865
+    CLOSE_DEF_DIST   0.108392   0.00279232    38.8179     <1e-99   0.102919    0.113865 
     ────────────────────────────────────────────────────────────────────────────────────
 
 
 
 How can we interpret those results?
 
-* time pressure makes NBA players more successful: the higher the shot clock, the more likely to score
+* time pressure makes one more successful: the higher the shot clock, the more likely one is to score the shot
 * shots from further away are more likely to be missed
 * the further away the closest defender is, the more likely the shot will be a success
 
@@ -498,10 +607,12 @@ X = hcat(ones(size(X,1)), X);
 ```julia
 theta_guess = zeros(size(X,2))
 @time theta, flag, history = nr_probit(y, X, theta_guess, max_iter=1000, tol=0.0001);
-plot(history, label= "error", title = "Convergence of the gradient descent algorithm")
+plot(history, label= "error", title = "Convergence of the Newton-Raphson algorithm")
 ```
 
-      0.301748 seconds (4.90 M allocations: 568.272 MiB, 29.93% gc time)
+      0.260955 seconds (4.90 M allocations: 568.272 MiB, 32.53% gc time)
+
+
 
 
 
@@ -514,11 +625,11 @@ plot(history, label= "error", title = "Convergence of the gradient descent algor
 print("Estimate for theta using Optim is $(res.minimizer)")
 ```
 
-    Estimate for theta using Optim is [-0.057513, 0.0185199, -0.0597451, 0.108392]
+    Estimate for theta using Optim is [-0.0121241, 1.03182, 2.03217]
 
-## Conclusion
+## Conclusion 
 
-The logistic regression model, often used in social sciences and in machine learning for classification purposes is a powerful tool. This blog post shows how the logistic regression model can be derived from first principles (latent regression interpretation) and how it can be implemented in just a few lines of codes. A few extensions to this blog post could be to calculate the [ROC curve](https://en.wikipedia.org/wiki/Receiver_operating_characteristic) and to calculate the standard errors.
+The logistic model, often used in social sciences and in machine learning for classification purposes is a powerful tool. This blog post showed how the logistic regression model can be derived from first principles (latent regression interpretation) and how it can be implemented in just a few lines of codes. A few extensions to this blog post could be to calculate the [ROC curve](https://en.wikipedia.org/wiki/Receiver_operating_characteristic) and to calculate the standard errors. 
 
 ## References
-* https://rpubs.com/junworks/Understanding-Logistic-Regression-from-Scratch
+* https://rpubs.com/junworks/Understanding-Logistic-Regression-from-Scratch 
